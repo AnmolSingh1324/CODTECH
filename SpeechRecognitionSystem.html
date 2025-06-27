@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Speech-to-Text - Internship Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
+        
+        :root {
+            --neon-cyan: #00ffff;
+            --neon-purple: #8b5cf6;
+            --neon-pink: #ff1493;
+            --dark-bg: #0a0a0f;
+            --card-bg: #1a1a2e;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Exo 2', sans-serif;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+            animation: floatingOrbs 20s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes gradientShift {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes floatingOrbs {
+            0%, 100% {
+                transform: translate(0px, 0px) scale(1);
+            }
+            33% {
+                transform: translate(30px, -30px) scale(1.1);
+            }
+            66% {
+                transform: translate(-20px, 20px) scale(0.9);
+            }
+        }
+
+        .orbitron {
+            font-family: 'Orbitron', monospace;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan), 0 0 30px var(--neon-cyan);
+            animation: neonPulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes neonPulse {
+            from { text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan), 0 0 30px var(--neon-cyan); }
+            to { text-shadow: 0 0 5px var(--neon-cyan), 0 0 10px var(--neon-cyan), 0 0 15px var(--neon-cyan); }
+        }
+
+        .cyber-card {
+            background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.9));
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            backdrop-filter: blur(15px);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .cyber-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .cyber-card:hover::before {
+            left: 100%;
+        }
+
+        .cyber-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 20px 40px rgba(0, 255, 255, 0.2);
+        }
+
+        .holo-button {
+            background: linear-gradient(45deg, rgba(139, 92, 246, 0.8), rgba(0, 255, 255, 0.6));
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .holo-button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, var(--neon-purple), var(--neon-cyan));
+            z-index: -1;
+            border-radius: inherit;
+        }
+
+        .holo-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+        }
+
+        .voice-visualizer {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            height: 80px;
+            gap: 3px;
+            margin: 20px 0;
+        }
+
+        .voice-bar {
+            width: 4px;
+            background: linear-gradient(to top, var(--neon-cyan), var(--neon-purple));
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+
+        .recording-pulse {
+            animation: recordingPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes recordingPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+            animation: float 20s linear infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+
+        .neural-grid {
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 50px 50px; }
+        }
+
+        .voice-command-list {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .command-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+        }
+
+        .command-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--neon-cyan);
+            animation: statusBlink 2s ease-in-out infinite;
+        }
+
+        @keyframes statusBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body class="neural-grid">
+    <!-- Floating Particles -->
+    <div class="floating-particles" id="particles"></div>
+
+    <div class="container mx-auto px-6 py-8 relative z-10">
+        <!-- Header -->
+        <header class="text-center mb-16">
+            <div class="relative">
+                <h1 class="orbitron text-6xl font-black text-white neon-text mb-6">
+                    AI Speech-to-Text
+                </h1>
+                <div class="text-2xl text-cyan-300 font-light tracking-wider">
+                    >>> Created By Anmol Singh <<<
+                </div>
+                <div class="mt-4 text-purple-300 text-lg">
+                    [STATUS: ACTIVE]
+                </div>
+            </div>
+        </header>
+
+        <!-- Tasks Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+            
+            <!-- Enhanced Speech-to-Text Task -->
+            <div class="cyber-card rounded-2xl p-8 col-span-1 lg:col-span-2">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center mr-6">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="orbitron text-3xl font-bold text-white mb-2">NEURAL VOICE INTERFACE</h2>
+                            <p class="text-cyan-300 text-lg">Advanced speech recognition with voice commands</p>
+                        </div>
+                    </div>
+                    <div class="status-indicator"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Voice Control Panel -->
+                    <div class="space-y-6">
+                        <!-- Voice Visualizer -->
+                        <div class="voice-visualizer" id="voiceVisualizer">
+                            <div class="voice-bar" style="height: 20px;"></div>
+                            <div class="voice-bar" style="height: 35px;"></div>
+                            <div class="voice-bar" style="height: 15px;"></div>
+                            <div class="voice-bar" style="height: 45px;"></div>
+                            <div class="voice-bar" style="height: 25px;"></div>
+                            <div class="voice-bar" style="height: 60px;"></div>
+                            <div class="voice-bar" style="height: 30px;"></div>
+                            <div class="voice-bar" style="height: 40px;"></div>
+                            <div class="voice-bar" style="height: 20px;"></div>
+                            <div class="voice-bar" style="height: 50px;"></div>
+                        </div>
+
+                        <!-- Control Buttons -->
+                        <div class="flex flex-col space-y-4">
+                            <button id="startVoiceRecording" class="holo-button text-white font-bold py-4 px-8 rounded-xl text-lg orbitron">
+                                🎤 INITIALIZE VOICE CAPTURE
+                            </button>
+                            <button id="stopVoiceRecording" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-xl text-lg orbitron hidden">
+                                ⏹️ TERMINATE RECORDING
+                            </button>
+                            <button id="clearTranscription" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-xl orbitron">
+                                🗑️ CLEAR BUFFER
+                            </button>
+                        </div>
+
+                        <!-- Voice Commands -->
+                        <div class="voice-command-list">
+                            <h3 class="text-cyan-300 font-bold mb-3 orbitron">VOICE COMMANDS:</h3>
+                            <div class="command-item">
+                                <span class="text-white">"Clear text"</span>
+                                <span class="text-cyan-300 text-sm">Clears transcription</span>
+                            </div>
+                            <div class="command-item">
+                                <span class="text-white">"Save transcript"</span>
+                                <span class="text-cyan-300 text-sm">Downloads text file</span>
+                            </div>
+                            <div class="command-item">
+                                <span class="text-white">"Copy text"</span>
+                                <span class="text-cyan-300 text-sm">Copies to clipboard</span>
+                            </div>
+                            <div class="command-item">
+                                <span class="text-white">"New paragraph"</span>
+                                <span class="text-cyan-300 text-sm">Adds line break</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transcription Display -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-cyan-300 font-bold orbitron text-xl">LIVE TRANSCRIPTION</h3>
+                            <div id="recordingStatus" class="text-red-400 font-bold hidden recording-pulse">● RECORDING</div>
+                        </div>
+                        
+                        <div class="bg-black bg-opacity-50 border border-cyan-500 rounded-xl p-6 min-h-96 relative">
+                            <div id="transcriptionOutput" class="text-white font-mono text-lg leading-relaxed whitespace-pre-wrap">
+                                [AWAITING VOICE INPUT...]
+                            </div>
+                            <div class="absolute bottom-4 right-4 text-cyan-300 text-sm orbitron">
+                                CHARS: <span id="charCount">0</span> | WORDS: <span id="wordCount">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Additional Features -->
+                        <div class="flex space-x-4">
+                            <button id="downloadTranscript" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg orbitron text-sm">
+                                📥 DOWNLOAD
+                            </button>
+                            <button id="copyTranscript" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg orbitron text-sm">
+                                📋 COPY
+                            </button>
+                            <select id="languageSelect" class="bg-gray-800 text-white px-4 py-2 rounded-lg border border-cyan-500">
+                                <option value="en-US">English (US)</option>
+                                <option value="en-GB">English (UK)</option>
+                                <option value="es-ES">Spanish</option>
+                                <option value="fr-FR">French</option>
+                                <option value="de-DE">German</option>
+                                <option value="hi-IN">Hindi</option>
+                                <option value="ja-JP">Japanese</option>
+                                <option value="zh-CN">Chinese</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Enhanced Speech-to-Text with voice commands
+        let recognition;
+        let isRecording = false;
+        let finalTranscript = '';
+        
+        function initializeSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = document.getElementById('languageSelect').value;
+                
+                recognition.onstart = () => {
+                    isRecording = true;
+                    document.getElementById('startVoiceRecording').classList.add('hidden');
+                    document.getElementById('stopVoiceRecording').classList.remove('hidden');
+                    document.getElementById('recordingStatus').classList.remove('hidden');
+                    animateVoiceVisualizer();
+                };
+
+                recognition.onresult = (event) => {
+                    let interimTranscript = '';
+                    
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript + ' ';
+                            processVoiceCommand(transcript.toLowerCase().trim());
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+                    
+                    displayTranscription(finalTranscript + interimTranscript);
+                    updateWordCount(finalTranscript + interimTranscript);
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    stopVoiceRecording();
+                };
+
+                recognition.onend = () => {
+                    if (isRecording) {
+                        recognition.start(); // Restart for continuous recording
+                    }
+                };
+            } else {
+                alert('Speech recognition not supported. Please use Chrome, Edge, or Safari.');
+            }
+        }
+
+        function processVoiceCommand(command) {
+            if (command.includes('clear text') || command.includes('clear transcript')) {
+                clearTranscription();
+            } else if (command.includes('save transcript') || command.includes('download')) {
+                downloadTranscript();
+            } else if (command.includes('copy text') || command.includes('copy transcript')) {
+                copyToClipboard();
+            } else if (command.includes('new paragraph') || command.includes('new line')) {
+                finalTranscript += '\n\n';
+                displayTranscription(finalTranscript);
+            }
+        }
+
+        function displayTranscription(text) {
+            const output = document.getElementById('transcriptionOutput');
+            output.textContent = text || '[AWAITING VOICE INPUT...]';
+        }
+
+        function updateWordCount(text) {
+            const charCount = text.length;
+            const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+            document.getElementById('charCount').textContent = charCount;
+            document.getElementById('wordCount').textContent = wordCount;
+        }
+
+        function animateVoiceVisualizer() {
+            const bars = document.querySelectorAll('.voice-bar');
+            const interval = setInterval(() => {
+                if (!isRecording) {
+                    clearInterval(interval);
+                    bars.forEach(bar => bar.style.height = '20px');
+                    return;
+                }
+                bars.forEach(bar => {
+                    const height = Math.random() * 60 + 10;
+                    bar.style.height = height + 'px';
+                });
+            }, 100);
+        }
+
+        function startVoiceRecording() {
+            if (recognition) {
+                recognition.start();
+            }
+        }
+
+        function stopVoiceRecording() {
+            isRecording = false;
+            if (recognition) {
+                recognition.stop();
+            }
+            document.getElementById('startVoiceRecording').classList.remove('hidden');
+            document.getElementById('stopVoiceRecording').classList.add('hidden');
+            document.getElementById('recordingStatus').classList.add('hidden');
+        }
+
+        function clearTranscription() {
+            finalTranscript = '';
+            displayTranscription('');
+            updateWordCount('');
+        }
+
+        function downloadTranscript() {
+            const text = finalTranscript || 'No transcription available';
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'voice_transcript_' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function copyToClipboard() {
+            if (finalTranscript) {
+                navigator.clipboard.writeText(finalTranscript).then(() => {
+                    alert('Transcription copied to clipboard!');
+                });
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('startVoiceRecording').addEventListener('click', startVoiceRecording);
+        document.getElementById('stopVoiceRecording').addEventListener('click', stopVoiceRecording);
+        document.getElementById('clearTranscription').addEventListener('click', clearTranscription);
+        document.getElementById('downloadTranscript').addEventListener('click', downloadTranscript);
+        document.getElementById('copyTranscript').addEventListener('click', copyToClipboard);
+        
+        document.getElementById('languageSelect').addEventListener('change', (e) => {
+            if (recognition) {
+                recognition.lang = e.target.value;
+            }
+        });
+
+        // Other task functions (simplified for demo)
+        async function summarizeText() {
+            const article = document.getElementById('articleText').value;
+            if (!article.trim()) {
+                alert('Please enter text to analyze');
+                return;
+            }
+            
+            setTimeout(() => {
+                const summary = `[NEURAL ANALYSIS COMPLETE] Key insights extracted from ${article.split(' ').length} words. Primary themes identified and condensed using advanced NLP algorithms. Content relevance: 87.3%. Semantic coherence: 92.1%.`;
+                document.getElementById('summaryText').textContent = summary;
+                document.getElementById('summaryResult').classList.remove('hidden');
+            }, 1500);
+        }
+
+        function applyStyleTransfer() {
+            const contentFile = document.getElementById('contentImage').files[0];
+            const styleFile = document.getElementById('styleImage').files[0];
+
+            if (!contentFile || !styleFile) {
+                alert('Please select both content and style images');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('styledImage').src = e.target.result;
+                document.getElementById('styleTransferResult').classList.remove('hidden');
+            };
+            reader.readAsDataURL(contentFile);
+        }
+
+        async function generateText() {
+            const prompt = document.getElementById('textPrompt').value;
+            if (!prompt.trim()) {
+                alert('Please enter generation parameters');
+                return;
+            }
+            
+            setTimeout(() => {
+                const generatedText = `[CONTENT GENERATION INITIATED] Based on input parameters: "${prompt}". Neural network processing... Creative synthesis algorithm engaged. Output stream: Advanced AI systems continue to evolve, pushing the boundaries of what's possible in machine learning and natural language processing. The convergence of multiple technologies creates unprecedented opportunities for innovation and discovery in the digital realm.`;
+                document.getElementById('generatedText').textContent = generatedText;
+                document.getElementById('textGenResult').classList.remove('hidden');
+            }, 2000);
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+            initializeSpeechRecognition();
+        });
+    </script>
+</body>
+</html>
