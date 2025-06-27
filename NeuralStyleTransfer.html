@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Style Transfer - CODTECH Task 3</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS to override/enhance Tailwind for specific elements */
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif, Arial, sans-serif; /* Added fallback font */
+            background: url('6.gif') no-repeat center center fixed;
+            background-size: cover;
+            color: #eee;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .upload-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .upload-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .file-input-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            transition: all 0.3s ease;
+        }
+
+        .file-input-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .preview-image {
+            box-shadow: 0 5px 15px rgb(0, 0, 0);
+        }
+
+        .style-btn {
+            transition: all 0.3s ease;
+        }
+
+        .style-btn:hover, .style-btn.active {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .process-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ffa500);
+            transition: all 0.3s ease;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .process-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Custom alert box */
+        .custom-alert {
+            animation: fadeOut 3s forwards;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; display: none; }
+        }
+        .logo-container {
+    position: relative;
+    display: inline-block;
+}
+
+.logo-animation {
+    animation: rotate 4s linear infinite;
+}
+
+.circle {
+    animation: draw 2s ease-in-out forwards;
+}
+
+@keyframes draw {
+    0% {
+        stroke-dasharray: 0, 188.4; /* Circumference of the circle */
+    }
+    100% {
+        stroke-dasharray: 188.4, 0; /* Complete the circle */
+    }
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.brush {
+    animation: bounce 1s ease-in-out infinite alternate;
+}
+
+@keyframes bounce {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(-10px);
+    }
+}
+
+.header h1 {
+    animation: textGlow 1s infinite alternate;
+}
+    </style>
+</head>
+<body class="p-5">
+    <div class="header text-center mb-8">
+    <div class="logo-container">
+        <svg class="logo-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="100" height="100">
+            <circle class="circle" cx="32" cy="32" r="30" fill="none" stroke="#ff6a00" stroke-width="4" />
+            <path class="brush" fill="#ee0979" d="M32 8c-13.2 0-24 10.8-24 24s10.8 24 24 24 24-10.8 24-24-10.8-24-24-24zm0 44c-11.1 0-20-8.9-20-20s8.9-20 20-20 20 8.9 20 20-8.9 20-20 20z"/>
+            <path fill="#ffffff" d="M32 12c-11 0-20 9-20 20s9 20 20 20 20-9 20-20-9-20-20-20zm0 36c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16z"/>
+        </svg>
+    </div>
+    <h1 class="text-5xl font-extrabold mb-2 animate-pulse">Neural Style Transfer</h1>
+    <p class="text-gray-600 text-lg">Transform your photos with artistic styles using AI</p>
+</div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div class="upload-card bg-white rounded-xl p-6 shadow-lg">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">📷 Content Image</h3>
+                <p class="mb-4 text-gray-600">Upload the photo you want to stylize</p>
+                <div class="relative w-full">
+                    <input type="file" id="contentImage" class="absolute opacity-0 w-full h-full cursor-pointer" accept="image/*">
+                    <label for="contentImage" class="file-input-button block w-full py-4 text-white rounded-xl cursor-pointer text-center text-lg font-medium">Choose Content Image</label>
+                </div>
+                <div class="preview-container mt-4 text-center">
+                    <img id="contentPreview" class="preview-image hidden mx-auto rounded-lg max-w-full h-auto max-h-52 object-contain" alt="Content preview">
+                </div>
+            </div>
+
+            <div class="upload-card bg-white rounded-xl p-6 shadow-lg">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">🎭 Style Image</h3>
+                <p class="mb-4 text-gray-600">Upload an artwork or choose a preset style</p>
+                <div class="relative w-full">
+                    <input type="file" id="styleImage" class="absolute opacity-0 w-full h-full cursor-pointer" accept="image/*">
+                    <label for="styleImage" class="file-input-button block w-full py-4 text-white rounded-xl cursor-pointer text-center text-lg font-medium">Choose Style Image</label>
+                </div>
+                <div class="preview-container mt-4 text-center">
+                    <img id="stylePreview" class="preview-image hidden mx-auto rounded-lg max-w-full h-auto max-h-52 object-contain" alt="Style preview">
+                </div>
+            </div>
+        </div>
+
+        <div class="controls text-center my-8">
+            <h3 class="text-2xl font-semibold text-gray-800 mb-6">Or Choose a Preset Style:</h3>
+            <div class="style-buttons flex flex-wrap gap-4 justify-center mb-8">
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="starry-night">🌃 Starry Night</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="picasso">🎨 Picasso</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="wave">🌊 Great Wave</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="scream">😱 The Scream</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="mosaic">🟦 Mosaic</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="watercolor">💧 Watercolor</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="pop-art">💥 Pop Art</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="sketch">✍️ Sketch</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="stained-glass">🌈 Stained Glass</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="oil-painting">🖼️ Oil Painting</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="impressionist">🌸 Impressionist</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="charcoal">✒️ Charcoal</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="digital-glitch">👾 Digital Glitch</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="pointillism">🔵 Pointillism</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="cubist">🧊 Cubist</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="gothic">🦇 Gothic</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="cyberpunk">🌃 Cyberpunk</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="cartoon">🐰 Cartoon</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="manga">📚 Manga</button>
+                <button class="style-btn px-6 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full cursor-pointer text-lg font-medium" data-style="retro-wave">🎶 Retro Wave</button>
+            </div>
+
+            <div class="my-8">
+                <button id="processBtn" class="process-btn px-10 py-4 text-white rounded-full text-xl font-bold mx-2" disabled>
+                    <span id="processText">🚀 Apply Style Transfer</span>
+                </button>
+                <button id="downloadBtn" class="process-btn px-10 py-4 text-white rounded-full text-xl font-bold mx-2 hidden">
+                    📥 Download Result
+                </button>
+            </div>
+
+            <div class="progress-container hidden my-5" id="progressContainer">
+                <p class="mb-3 text-gray-600 text-lg">Processing your image...</p>
+                <div class="progress-bar w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="progress-fill h-full bg-gradient-to-r from-purple-500 to-indigo-600 w-0 rounded-full" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-section hidden mt-8 text-center" id="resultSection">
+            <h3 class="text-3xl font-semibold text-gray-800 mb-6">✨ Style Transfer Results</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5">
+                <div class="result-card bg-white rounded-xl p-6 shadow-lg">
+                    <h4 class="text-xl font-medium text-gray-800 mb-4">Original Image</h4>
+                    <img id="originalResult" class="result-image max-w-full h-auto mx-auto rounded-lg object-contain" alt="Original">
+                </div>
+                <div class="result-card bg-white rounded-xl p-6 shadow-lg">
+                    <h4 class="text-xl font-medium text-gray-800 mb-4">Stylized Image</h4>
+                    <img id="styledResult" class="result-image max-w-full h-auto mx-auto rounded-lg object-contain" alt="Styled">
+                </div>
+            </div>
+        </div>
+
+        <div class="footer text-center mt-10 text-gray-600 text-sm">
+            <p>Created By Anmol Singh❤️</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.10.0/tf.min.js"></script>
+    <script>
+        class NeuralStyleTransfer {
+            constructor() {
+                this.contentImage = null;
+                this.styleImage = null; // Stores the Image object for custom style, or the generated canvas image for presets
+                this.selectedStyle = null; // Stores the name of the selected preset style
+                this.resultImage = null; // Stores the data URL of the final stylized image for download
+                this.initializeEventListeners();
+                this.loadPresetStyles();
+            }
+
+            // Initializes all event listeners for file inputs, style buttons, and process/download buttons.
+            initializeEventListeners() {
+                // Handle content image upload
+                document.getElementById('contentImage').addEventListener('change', (e) => {
+                    this.handleImageUpload(e, 'content');
+                });
+
+                // Handle style image upload
+                document.getElementById('styleImage').addEventListener('change', (e) => {
+                    this.handleImageUpload(e, 'style');
+                });
+
+                // Add event listeners for preset style buttons
+                document.querySelectorAll('.style-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.selectPresetStyle(e.target.dataset.style);
+                        this.updateStyleButtons(e.target);
+                    });
+                });
+
+                // Event listener for the main process button
+                document.getElementById('processBtn').addEventListener('click', () => {
+                    this.processStyleTransfer();
+                });
+
+                // Event listener for the download button
+                document.getElementById('downloadBtn').addEventListener('click', () => {
+                    this.downloadResult();
+                });
+            }
+
+            // Handles the image file upload, displaying a preview and storing the Image object.
+            handleImageUpload(event, type) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        if (type === 'content') {
+                            this.contentImage = img;
+                            document.getElementById('contentPreview').src = e.target.result;
+                            document.getElementById('contentPreview').style.display = 'block';
+                        } else {
+                            this.styleImage = img; // Store the uploaded style image
+                            this.selectedStyle = null; // Clear any previously selected preset style
+                            document.getElementById('stylePreview').src = e.target.result;
+                            document.getElementById('stylePreview').style.display = 'block';
+                            document.getElementById('styleImage').value = ''; // Clear the file input if a file was selected
+                            this.clearStyleButtons(); // Deselect any active preset style buttons
+                        }
+                        this.updateProcessButton(); // Enable/disable process button based on image availability
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // Loads and generates the visual patterns for preset styles.
+            loadPresetStyles() {
+                this.presetStyles = {
+                    'starry-night': this.generateStylePattern('starry-night'),
+                    'picasso': this.generateStylePattern('picasso'),
+                    'wave': this.generateStylePattern('wave'),
+                    'scream': this.generateStylePattern('scream'),
+                    'mosaic': this.generateStylePattern('mosaic'),
+                    'watercolor': this.generateStylePattern('watercolor'),
+                    'pop-art': this.generateStylePattern('pop-art'),
+                    'sketch': this.generateStylePattern('sketch'),
+                    'stained-glass': this.generateStylePattern('stained-glass'),
+                    'oil-painting': this.generateStylePattern('oil-painting'),
+                    'impressionist': this.generateStylePattern('impressionist'),
+                    'charcoal': this.generateStylePattern('charcoal'),
+                    'digital-glitch': this.generateStylePattern('digital-glitch'),
+                    'pointillism': this.generateStylePattern('pointillism'),
+                    'cubist': this.generateStylePattern('cubist'),
+                    'gothic': this.generateStylePattern('gothic'),
+                    'cyberpunk': this.generateStylePattern('cyberpunk'),
+                    'cartoon': this.generateStylePattern('cartoon'),
+                    'manga': this.generateStylePattern('manga'),
+                    'retro-wave': this.generateStylePattern('retro-wave')
+                };
+            }
+
+            // Generates a visual representation of a style pattern on a canvas.
+            generateStylePattern(styleName) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+
+                switch(styleName) {
+                    case 'starry-night': this.drawStarryNightPattern(ctx, canvas.width, canvas.height); break;
+                    case 'picasso': this.drawPicassoPattern(ctx, canvas.width, canvas.height); break;
+                    case 'wave': this.drawWavePattern(ctx, canvas.width, canvas.height); break;
+                    case 'scream': this.drawScreamPattern(ctx, canvas.width, canvas.height); break;
+                    case 'mosaic': this.drawMosaicPattern(ctx, canvas.width, canvas.height); break;
+                    case 'watercolor': this.drawWatercolorPattern(ctx, canvas.width, canvas.height); break;
+                    case 'pop-art': this.drawPopArtPattern(ctx, canvas.width, canvas.height); break;
+                    case 'sketch': this.drawSketchPattern(ctx, canvas.width, canvas.height); break;
+                    case 'stained-glass': this.drawStainedGlassPattern(ctx, canvas.width, canvas.height); break;
+                    case 'oil-painting': this.drawOilPaintingPattern(ctx, canvas.width, canvas.height); break;
+                    case 'impressionist': this.drawImpressionistPattern(ctx, canvas.width, canvas.height); break;
+                    case 'charcoal': this.drawCharcoalPattern(ctx, canvas.width, canvas.height); break;
+                    case 'digital-glitch': this.drawDigitalGlitchPattern(ctx, canvas.width, canvas.height); break;
+                    case 'pointillism': this.drawPointillismPattern(ctx, canvas.width, canvas.height); break;
+                    case 'cubist': this.drawCubistPattern(ctx, canvas.width, canvas.height); break;
+                    case 'gothic': this.drawGothicPattern(ctx, canvas.width, canvas.height); break;
+                    case 'cyberpunk': this.drawCyberpunkPattern(ctx, canvas.width, canvas.height); break;
+                    case 'cartoon': this.drawCartoonPattern(ctx, canvas.width, canvas.height); break;
+                    case 'manga': this.drawMangaPattern(ctx, canvas.width, canvas.height); break;
+                    case 'retro-wave': this.drawRetroWavePattern(ctx, canvas.width, canvas.height); break;
+                }
+
+                const img = new Image();
+                img.src = canvas.toDataURL();
+                return img;
+            }
+
+            // --- Pattern Drawing Functions (for preset previews) ---
+            drawStarryNightPattern(ctx, width, height) {
+                const gradient = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width/2);
+                gradient.addColorStop(0, '#1a2a6c');
+                gradient.addColorStop(1, '#b21f1f');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#ffd700';
+                ctx.lineWidth = 3;
+                for (let i = 0; i < 5; i++) {
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * width, Math.random() * height, 20 + Math.random() * 30, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.fillStyle = '#ffffff';
+                for (let i = 0; i < 50; i++) {
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * width, Math.random() * height, 0.5 + Math.random() * 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            drawPicassoPattern(ctx, width, height) {
+                const colors = ['#f4a261', '#e76f51', '#2a9d8f', '#264653', '#e9c46a'];
+                for (let i = 0; i < 15; i++) {
+                    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                    ctx.beginPath();
+                    const x1 = Math.random() * width;
+                    const y1 = Math.random() * height;
+                    const x2 = Math.random() * width;
+                    const y2 = Math.random() * height;
+                    const x3 = Math.random() * width;
+                    const y3 = Math.random() * height;
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.lineTo(x3, y3);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+
+            drawWavePattern(ctx, width, height) {
+                ctx.fillStyle = '#4a90e2';
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#1e3d59';
+                ctx.lineWidth = 4;
+                for (let i = 0; i < 5; i++) {
+                    ctx.beginPath();
+                    const startY = height - 50 - i * 30;
+                    ctx.moveTo(0, startY + Math.sin(0) * 10);
+                    for (let x = 0; x <= width; x += 10) {
+                        ctx.lineTo(x, startY + Math.sin(x * 0.05 + i * 0.5) * (10 + i * 5));
+                    }
+                    ctx.stroke();
+                }
+            }
+
+            drawScreamPattern(ctx, width, height) {
+                const gradient = ctx.createLinearGradient(0, 0, width, height);
+                gradient.addColorStop(0, '#f25f5c');
+                gradient.addColorStop(0.5, '#ffd700');
+                gradient.addColorStop(1, '#f25f5c');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#4a4e69';
+                ctx.lineWidth = 5;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    const startY = 50 + i * 50;
+                    ctx.moveTo(0, startY + Math.sin(0) * 20);
+                    for (let x = 0; x <= width; x += 10) {
+                        ctx.lineTo(x, startY + Math.sin(x * 0.03) * 20);
+                    }
+                    ctx.stroke();
+                }
+                ctx.fillStyle = '#333';
+                ctx.fillRect(0, height * 0.7, width, height * 0.3);
+            }
+
+            drawMosaicPattern(ctx, width, height) {
+                const colors = ['#e17055', '#74b9ff', '#00b894', '#fdcb6e', '#a29bfe', '#fd79a8'];
+                const tileSize = 20;
+                const gap = 2;
+                for (let x = 0; x < width; x += tileSize) {
+                    for (let y = 0; y < height; y += tileSize) {
+                        ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                        ctx.fillRect(x, y, tileSize - gap, tileSize - gap);
+                    }
+                }
+            }
+
+            drawWatercolorPattern(ctx, width, height) {
+                ctx.fillStyle = '#fdfbfb';
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.globalAlpha = 0.4;
+                const colors = ['#ff7675', '#74b9ff', '#55a3ff', '#00b894', '#f1c40f'];
+                for (let i = 0; i < 10; i++) {
+                    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * width, Math.random() * height, 30 + Math.random() * 50, 0, Math.PI * 2);
+                    ctx.filter = 'blur(5px)';
+                    ctx.fill();
+                    ctx.filter = 'none';
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            drawPopArtPattern(ctx, width, height) {
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(0, 0, width, height);
+
+                const colors = ['#f8b500', '#f44336', '#3f51b5', '#00bcd4'];
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+
+                for (let i = 0; i < 5; i++) {
+                    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                    ctx.beginPath();
+                    ctx.rect(Math.random() * (width - 100), Math.random() * (height - 100), 50 + Math.random() * 50, 50 + Math.random() * 50);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                const dotSize = 4;
+                for (let x = 0; x < width; x += dotSize * 2) {
+                    for (let y = 0; y < height; y += dotSize * 2) {
+                        ctx.beginPath();
+                        ctx.arc(x + dotSize, y + dotSize, dotSize * Math.random(), 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            drawSketchPattern(ctx, width, height) {
+                ctx.fillStyle = '#f5f5dc';
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.8;
+
+                for (let i = 0; i < 50; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(Math.random() * width, Math.random() * height);
+                    ctx.lineTo(Math.random() * width, Math.random() * height);
+                    ctx.stroke();
+                }
+
+                ctx.globalAlpha = 0.1;
+                for (let i = 0; i < 100; i++) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const len = 10 + Math.random() * 30;
+                    const angle = Math.random() * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + len * Math.cos(angle), y + len * Math.sin(angle));
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            drawStainedGlassPattern(ctx, width, height) {
+                const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#ecf0f1'];
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#2c3e50';
+                ctx.lineWidth = 4;
+
+                const numCells = 5;
+                const cellWidth = width / numCells;
+                const cellHeight = height / numCells;
+
+                for (let i = 0; i < numCells; i++) {
+                    for (let j = 0; j < numCells; j++) {
+                        const x = i * cellWidth;
+                        const y = j * cellHeight;
+                        ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                        ctx.beginPath();
+                        ctx.moveTo(x + Math.random() * cellWidth * 0.2, y + Math.random() * cellHeight * 0.2);
+                        ctx.lineTo(x + cellWidth - Math.random() * cellWidth * 0.2, y + Math.random() * cellHeight * 0.2);
+                        ctx.lineTo(x + cellWidth - Math.random() * cellWidth * 0.2, y + cellHeight - Math.random() * cellHeight * 0.2);
+                        ctx.lineTo(x + Math.random() * cellWidth * 0.2, y + cellHeight - Math.random() * cellHeight * 0.2);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            drawOilPaintingPattern(ctx, width, height) {
+                ctx.fillStyle = '#d4d4dc'; // Muted background
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.globalAlpha = 0.8;
+                const colors = ['#8b0000', '#00008b', '#006400', '#b8860b', '#483d8b']; // Muted, rich colors
+
+                for (let i = 0; i < 30; i++) {
+                    ctx.strokeStyle = colors[Math.floor(Math.random() * colors.length)];
+                    ctx.beginPath();
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const len = 20 + Math.random() * 40;
+                    const angle = Math.random() * Math.PI * 2;
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + len * Math.cos(angle), y + len * Math.sin(angle));
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            drawImpressionistPattern(ctx, width, height) {
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.globalAlpha = 0.6;
+                const colors = ['#ffc0cb', '#87ceeb', '#90ee90', '#f0e68c', '#dda0dd']; // Pastel colors
+                for (let i = 0; i < 100; i++) {
+                    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * width, Math.random() * height, 3 + Math.random() * 7, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            drawCharcoalPattern(ctx, width, height) {
+                ctx.fillStyle = '#e0e0e0'; // Light grey paper
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1.5;
+                ctx.lineCap = 'butt';
+                ctx.globalAlpha = 0.7;
+
+                for (let i = 0; i < 70; i++) {
+                    ctx.beginPath();
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const len = 15 + Math.random() * 30;
+                    const angle = Math.random() * Math.PI * 2;
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + len * Math.cos(angle), y + len * Math.sin(angle));
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            drawDigitalGlitchPattern(ctx, width, height) {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, width, height);
+
+                const colors = ['#FF00FF', '#00FFFF', '#FFFF00']; // Glitch colors
+                for (let i = 0; i < 50; i++) {
+                    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const w = 5 + Math.random() * 20;
+                    const h = 2 + Math.random() * 10;
+                    ctx.fillRect(x, y, w, h);
+                }
+            }
+
+            drawPointillismPattern(ctx, width, height) {
+                ctx.fillStyle = '#fefefe';
+                ctx.fillRect(0, 0, width, height);
+
+                const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
+                for (let i = 0; i < 500; i++) {
+                    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * width, Math.random() * height, 1 + Math.random() * 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            drawCubistPattern(ctx, width, height) {
+                ctx.fillStyle = '#c0c0c0'; // Grey background
+                ctx.fillRect(0, 0, width, height);
+
+                const colors = ['#a9a9a9', '#808080', '#696969', '#556b2f', '#8b4513']; // Muted, earthy tones
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+
+                for (let i = 0; i < 20; i++) {
+                    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                    ctx.beginPath();
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const size = 30 + Math.random() * 50;
+                    const angle = Math.random() * Math.PI * 2; // Random rotation
+
+                    ctx.save();
+                    ctx.translate(x + size / 2, y + size / 2);
+                    ctx.rotate(angle);
+                    ctx.rect(-size / 2, -size / 2, size, size);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            drawGothicPattern(ctx, width, height) {
+                ctx.fillStyle = '#2c3e50'; // Dark background
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#7f8c8d'; // Silver/grey for details
+                ctx.lineWidth = 1;
+
+                // Simple arches and patterns
+                for (let i = 0; i < 8; i++) {
+                    ctx.beginPath();
+                    ctx.arc(width / 2, height, width / 2 - i * 15, Math.PI, 2 * Math.PI);
+                    ctx.stroke();
+                }
+                for (let i = 0; i < 50; i++) {
+                    ctx.fillStyle = '#ecf0f1'; // Light points
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * width, Math.random() * height, 1, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            drawCyberpunkPattern(ctx, width, height) {
+                ctx.fillStyle = '#1a1a2e'; // Dark, futuristic background
+                ctx.fillRect(0, 0, width, height);
+
+                const colors = ['#e03b86', '#00f7e0', '#8a2be2']; // Neon colors
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.7;
+
+                // Neon lines and grids
+                for (let i = 0; i < 10; i++) {
+                    ctx.strokeStyle = colors[Math.floor(Math.random() * colors.length)];
+                    ctx.beginPath();
+                    ctx.moveTo(0, Math.random() * height);
+                    ctx.lineTo(width, Math.random() * height);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(Math.random() * width, 0);
+                    ctx.lineTo(Math.random() * width, height);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            drawCartoonPattern(ctx, width, height) {
+                ctx.fillStyle = '#ffffff'; // White background
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                // Simple shapes with bold outlines
+                ctx.fillStyle = '#ffeb3b'; // Yellow
+                ctx.beginPath();
+                ctx.arc(width * 0.3, height * 0.4, 40, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#4caf50'; // Green
+                ctx.beginPath();
+                ctx.rect(width * 0.6, height * 0.5, 60, 60);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            drawMangaPattern(ctx, width, height) {
+                ctx.fillStyle = '#f8f8f8'; // Light background
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 1;
+
+                // Speed lines
+                for (let i = 0; i < 30; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(Math.random() * width, Math.random() * height);
+                    ctx.lineTo(Math.random() * width + 50, Math.random() * height + 50);
+                    ctx.stroke();
+                }
+                // Screen tone dots (simplistic)
+                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                const dotSize = 2;
+                for (let x = 0; x < width; x += dotSize * 4) {
+                    for (let y = 0; y < height; y += dotSize * 4) {
+                        ctx.beginPath();
+                        ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            drawRetroWavePattern(ctx, width, height) {
+                const gradient = ctx.createLinearGradient(0, 0, width, height);
+                gradient.addColorStop(0, '#6a0572'); // Dark purple
+                gradient.addColorStop(0.5, '#ab20fd'); // Bright purple
+                gradient.addColorStop(1, '#f749a2'); // Pink
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#00f7e0'; // Cyan neon
+                ctx.lineWidth = 3;
+
+                // Horizon lines
+                for (let y = height * 0.6; y < height; y += 10) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+
+                // Sun disc
+                ctx.fillStyle = '#ffff00'; // Yellow sun
+                ctx.beginPath();
+                ctx.arc(width / 2, height * 0.6, 30, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ff00ff'; // Magenta glow
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.arc(width / 2, height * 0.6, 35, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+
+            // Selects a preset style and updates the preview image and state.
+            selectPresetStyle(styleName) {
+                this.selectedStyle = styleName;
+                this.styleImage = this.presetStyles[styleName]; // Use the generated Image object for the preview
+                document.getElementById('stylePreview').src = this.styleImage.src;
+                document.getElementById('stylePreview').style.display = 'block';
+                document.getElementById('styleImage').value = ''; // Clear custom file input if a preset is chosen
+                this.updateProcessButton();
+            }
+
+            // Updates the active state of preset style buttons.
+            updateStyleButtons(activeBtn) {
+                document.querySelectorAll('.style-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                activeBtn.classList.add('active');
+            }
+
+            // Clears the active state of all preset style buttons.
+            clearStyleButtons() {
+                document.querySelectorAll('.style-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+            }
+
+            // Enables or disables the process button based on whether both content and style images are available.
+            updateProcessButton() {
+                const processBtn = document.getElementById('processBtn');
+                const hasContent = this.contentImage !== null;
+                const hasStyle = this.styleImage !== null; // Now checks if styleImage (custom or preset) is loaded
+                
+                processBtn.disabled = !(hasContent && hasStyle);
+            }
+
+            // Initiates the style transfer process, showing progress and handling results.
+            async processStyleTransfer() {
+                if (!this.contentImage || !this.styleImage) {
+                    this.showAlert('Please upload both a content image and select/upload a style image.');
+                    return;
+                }
+
+                const processBtn = document.getElementById('processBtn');
+                const progressContainer = document.getElementById('progressContainer');
+                const processText = document.getElementById('processText');
+                const downloadBtn = document.getElementById('downloadBtn');
+
+                // UI updates for processing state
+                processBtn.disabled = true;
+                processText.innerHTML = '<span class="loading"></span> Processing...';
+                progressContainer.style.display = 'block';
+                downloadBtn.style.display = 'none'; // Hide download button during new processing
+
+                // Show a specific alert for custom style images
+                if (this.selectedStyle === null && this.styleImage) {
+                    this.showAlert('Applying custom style: The average color of your style image will be blended with your content image. For deep style transfer, advanced AI models are typically required.', 'info');
+                }
+
+                try {
+                    // Simulate processing with progress updates
+                    await this.simulateProcessing();
+
+                    // Apply style transfer effect (this is where the core image manipulation happens)
+                    const result = await this.applyStyleTransfer();
+                    
+                    // Show results
+                    this.displayResults(result);
+
+                } catch (error) {
+                    console.error('Style transfer failed:', error);
+                    this.showAlert('Style transfer failed. Please try again.', 'error');
+                } finally {
+                    // Reset UI state
+                    processBtn.disabled = false;
+                    processText.innerHTML = '🚀 Apply Style Transfer';
+                    progressContainer.style.width = '0%'; // Reset progress bar
+                    progressContainer.style.display = 'none';
+                }
+            }
+
+            // Simulates processing time with a progress bar.
+            async simulateProcessing() {
+                const progressFill = document.getElementById('progressFill');
+                const steps = [
+                    { progress: 20, delay: 300 },
+                    { progress: 45, delay: 500 },
+                    { progress: 70, delay: 400 },
+                    { progress: 90, delay: 300 },
+                    { progress: 100, delay: 200 }
+                ];
+
+                progressFill.style.width = '0%'; // Reset before starting
+                for (const step of steps) {
+                    await new Promise(resolve => setTimeout(resolve, step.delay));
+                    progressFill.style.width = step.progress + '%';
+                }
+            }
+
+            // Core function to apply the style transfer effect.
+            async applyStyleTransfer() {
+                // Create a temporary canvas to draw and manipulate the content image
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Determine the size for processing. Limit to a reasonable size for performance.
+                const maxSize = 512; // Maximum width/height for processing
+                let width = this.contentImage.width;
+                let height = this.contentImage.height;
+
+                if (width > height) {
+                    if (width > maxSize) {
+                        height = Math.round(height * (maxSize / width));
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width = Math.round(width * (maxSize / height));
+                        height = maxSize;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                // Draw content image onto the canvas
+                ctx.drawImage(this.contentImage, 0, 0, canvas.width, canvas.height);
+                
+                // Get the pixel data from the content image
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                // Apply the style effect based on the selected style or a generic effect for custom images
+                const styledImageData = this.selectedStyle 
+                                        ? this.applyPresetStyleEffect(imageData, this.selectedStyle)
+                                        : this.applyGenericStyleEffect(imageData); // `this.styleImage` is accessed inside generic effect
+
+                // Put the modified pixel data back onto the canvas
+                ctx.putImageData(styledImageData, 0, 0);
+
+                return {
+                    original: this.contentImage.src, // Keep original content image source
+                    styled: canvas.toDataURL('image/png') // Get data URL of the stylized image
+                };
+            }
+
+            // Applies the specific effect for chosen preset styles.
+            applyPresetStyleEffect(imageData, styleName) {
+                switch(styleName) {
+                    case 'starry-night': return this.applyStarryNightEffect(imageData);
+                    case 'picasso': return this.applyPicassoEffect(imageData);
+                    case 'wave': return this.applyWaveEffect(imageData);
+                    case 'scream': return this.applyScreamEffect(imageData);
+                    case 'mosaic': return this.applyMosaicEffect(imageData);
+                    case 'watercolor': return this.applyWatercolorEffect(imageData);
+                    case 'pop-art': return this.applyPopArtEffect(imageData);
+                    case 'sketch': return this.applySketchEffect(imageData);
+                    case 'stained-glass': return this.applyStainedGlassEffect(imageData);
+                    case 'oil-painting': return this.applyOilPaintingEffect(imageData);
+                    case 'impressionist': return this.applyImpressionistEffect(imageData);
+                    case 'charcoal': return this.applyCharcoalEffect(imageData);
+                    case 'digital-glitch': return this.applyDigitalGlitchEffect(imageData);
+                    case 'pointillism': return this.applyPointillismEffect(imageData);
+                    case 'cubist': return this.applyCubistEffect(imageData);
+                    case 'gothic': return this.applyGothicEffect(imageData);
+                    case 'cyberpunk': return this.applyCyberpunkEffect(imageData);
+                    case 'cartoon': return this.applyCartoonEffect(imageData);
+                    case 'manga': return this.applyMangaEffect(imageData);
+                    case 'retro-wave': return this.applyRetroWaveEffect(imageData);
+                    default: return this.applyGenericStyleEffect(imageData); // Fallback, though ideally handled by selectedStyle check
+                }
+            }
+
+            // --- Image Manipulation Functions (applying style to content image data) ---
+
+            applyStarryNightEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    newData[i] = this.clamp(r * 0.7 + g * 0.1 + b * 0.1 + 20);
+                    newData[i + 1] = this.clamp(r * 0.1 + g * 0.8 + b * 0.2 + 10);
+                    newData[i + 2] = this.clamp(r * 0.1 + g * 0.1 + b * 1.5 + 30);
+                    newData[i + 3] = data[i + 3];
+                }
+                return newImageData;
+            }
+
+            applyPicassoEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+                const levels = 64;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    newData[i] = Math.floor(data[i] / levels) * levels;
+                    newData[i + 1] = Math.floor(data[i + 1] / levels) * levels;
+                    newData[i + 2] = Math.floor(data[i + 2] / levels) * levels;
+                    newData[i + 3] = data[i + 3];
+
+                    const x = (i / 4) % width;
+                    const y = Math.floor((i / 4) / width);
+                    
+                    const shiftX = Math.floor(Math.random() * 5) - 2;
+                    const shiftY = Math.floor(Math.random() * 5) - 2;
+
+                    const newX = this.clampCoord(x + shiftX, width);
+                    const newY = this.clampCoord(y + shiftY, height);
+
+                    const newIdx = (newY * width + newX) * 4;
+                    newData[i] = this.clamp((newData[i] + data[newIdx]) / 2);
+                    newData[i+1] = this.clamp((newData[i+1] + data[newIdx+1]) / 2);
+                    newData[i+2] = this.clamp((newData[i+2] + data[newIdx+2]) / 2);
+                }
+                return newImageData;
+            }
+
+            applyWaveEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                for (let y = 0; y < height; y++) {
+                    const waveOffset = Math.sin(y * 0.05) * 15;
+                    for (let x = 0; x < width; x++) {
+                        const originalX = this.clampCoord(x + waveOffset, width);
+                        const originalIdx = (y * width + originalX) * 4;
+                        const newIdx = (y * width + x) * 4;
+
+                        newData[newIdx] = this.clamp(data[originalIdx] * 0.7 + 50);
+                        newData[newIdx + 1] = this.clamp(data[originalIdx + 1] * 0.9 + 30);
+                        newData[newIdx + 2] = this.clamp(data[originalIdx + 2] * 1.3);
+                        newData[newIdx + 3] = data[originalIdx + 3];
+                    }
+                }
+                return newImageData;
+            }
+
+            applyScreamEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    newData[i] = this.clamp(r * 1.5 + g * 0.3);
+                    newData[i + 1] = this.clamp(g * 1.2 + r * 0.2);
+                    newData[i + 2] = this.clamp(b * 0.7);
+                    newData[i + 3] = data[i + 3];
+                }
+                return newImageData;
+            }
+
+            applyMosaicEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+                const blockSize = 10;
+
+                for (let y = 0; y < height; y += blockSize) {
+                    for (let x = 0; x < width; x += blockSize) {
+                        let r = 0, g = 0, b = 0, count = 0;
+                        for (let by = y; by < Math.min(y + blockSize, height); by++) {
+                            for (let bx = x; bx < Math.min(x + blockSize, width); bx++) {
+                                const idx = (by * width + bx) * 4;
+                                r += data[idx];
+                                g += data[idx + 1];
+                                b += data[idx + 2];
+                                count++;
+                            }
+                        }
+                        if (count > 0) {
+                            r = Math.floor(r / count);
+                            g = Math.floor(g / count);
+                            b = Math.floor(b / count);
+                        }
+
+                        for (let by = y; by < Math.min(y + blockSize, height); by++) {
+                            for (let bx = x; bx < Math.min(x + blockSize, width); bx++) {
+                                const idx = (by * width + bx) * 4;
+                                newData[idx] = r;
+                                newData[idx + 1] = g;
+                                newData[idx + 2] = b;
+                                newData[idx + 3] = data[idx + 3];
+                            }
+                        }
+                    }
+                }
+                return newImageData;
+            }
+
+            applyWatercolorEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+                const blurRadius = 2;
+
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+                        for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+                            for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+                                const nx = this.clampCoord(x + dx, width);
+                                const ny = this.clampCoord(y + dy, height);
+                                const idx = (ny * width + nx) * 4;
+                                rSum += data[idx];
+                                gSum += data[idx + 1];
+                                bSum += data[idx + 2];
+                                count++;
+                            }
+                        }
+                        const avgR = rSum / count;
+                        const avgG = gSum / count;
+                        const avgB = bSum / count;
+
+                        const newIdx = (y * width + x) * 4;
+                        newData[newIdx] = this.clamp(avgR * 0.9 + 30);
+                        newData[newIdx + 1] = this.clamp(avgG * 0.9 + 30);
+                        newData[newIdx + 2] = this.clamp(avgB * 0.9 + 30);
+                        newData[newIdx + 3] = data[newIdx + 3];
+                    }
+                }
+                return newImageData;
+            }
+
+            applyPopArtEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                const colorPalette = [
+                    [255, 0, 0], [0, 0, 255], [255, 255, 0], [0, 255, 0], [255, 0, 255], [0, 255, 255]
+                ];
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    let minDistance = Infinity;
+                    let closestColor = [r, g, b];
+                    for (const paletteColor of colorPalette) {
+                        const dist = Math.sqrt(
+                            Math.pow(r - paletteColor[0], 2) +
+                            Math.pow(g - paletteColor[1], 2) +
+                            Math.pow(b - paletteColor[2], 2)
+                        );
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            closestColor = paletteColor;
+                        }
+                    }
+                    newData[i] = closestColor[0];
+                    newData[i + 1] = closestColor[1];
+                    newData[i + 2] = closestColor[2];
+                    newData[i + 3] = data[i + 3];
+                }
+                
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.putImageData(newImageData, 0, 0);
+
+                tempCtx.filter = 'contrast(200%) brightness(120%)';
+                tempCtx.drawImage(tempCanvas, 0, 0);
+                
+                return tempCtx.getImageData(0, 0, width, height);
+            }
+
+            applySketchEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    newData[i] = avg;
+                    newData[i + 1] = avg;
+                    newData[i + 2] = avg;
+                    newData[i + 3] = data[i + 3];
+                }
+
+                const edgeData = new ImageData(width, height);
+                const edgePixels = edgeData.data;
+                const grayData = newImageData.data;
+
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const i = (y * width + x) * 4;
+
+                        const topLeft     = grayData[((y - 1) * width + (x - 1)) * 4];
+                        const topMid      = grayData[((y - 1) * width + x) * 4];
+                        const topRight    = grayData[((y - 1) * width + (x + 1)) * 4];
+                        const midLeft     = grayData[(y * width + (x - 1)) * 4];
+                        const midRight    = grayData[(y * width + (x + 1)) * 4];
+                        const botLeft     = grayData[((y + 1) * width + (x - 1)) * 4];
+                        const botMid      = grayData[((y + 1) * width + x) * 4];
+                        const botRight    = grayData[((y + 1) * width + (x + 1)) * 4];
+
+                        const Gx = (-topLeft - 2 * midLeft - botLeft) + (topRight + 2 * midRight + botRight);
+                        const Gy = (-topLeft - 2 * topMid - topRight) + (botLeft + 2 * botMid + botRight);
+
+                        const magnitude = Math.sqrt(Gx * Gx + Gy * Gy);
+                        const edgeValue = 255 - this.clamp(magnitude * 2);
+
+                        edgePixels[i] = edgeValue;
+                        edgePixels[i + 1] = edgeValue;
+                        edgePixels[i + 2] = edgeValue;
+                        edgePixels[i + 3] = 255;
+                    }
+                }
+                return edgeData;
+            }
+
+            applyStainedGlassEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                const cellSize = 15;
+                const outlineWidth = 2;
+
+                for (let y = 0; y < height; y += cellSize) {
+                    for (let x = 0; x < width; x += cellSize) {
+                        let r = 0, g = 0, b = 0, count = 0;
+                        for (let by = y; by < Math.min(y + cellSize, height); by++) {
+                            for (let bx = x; bx < Math.min(x + cellSize, width); bx++) {
+                                const idx = (by * width + bx) * 4;
+                                r += data[idx];
+                                g += data[idx + 1];
+                                b += data[idx + 2];
+                                count++;
+                            }
+                        }
+                        if (count > 0) {
+                            r = Math.floor(r / count);
+                            g = Math.floor(g / count);
+                            b = Math.floor(b / count);
+                        }
+
+                        for (let by = y; by < Math.min(y + cellSize, height); by++) {
+                            for (let bx = x; bx < Math.min(x + cellSize, width); bx++) {
+                                const idx = (by * width + bx) * 4;
+
+                                if (bx < x + outlineWidth || bx >= x + cellSize - outlineWidth ||
+                                    by < y + outlineWidth || by >= y + cellSize - outlineWidth) {
+                                    newData[idx] = 0;
+                                    newData[idx + 1] = 0;
+                                    newData[idx + 2] = 0;
+                                } else {
+                                    newData[idx] = r;
+                                    newData[idx + 1] = g;
+                                    newData[idx + 2] = b;
+                                }
+                                newData[idx + 3] = data[idx + 3];
+                            }
+                        }
+                    }
+                }
+                return newImageData;
+            }
+
+            applyOilPaintingEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+                const radius = 5; // Brush stroke size
+
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+                        for (let dy = -radius; dy <= radius; dy++) {
+                            for (let dx = -radius; dx <= radius; dx++) {
+                                const nx = this.clampCoord(x + dx, width);
+                                const ny = this.clampCoord(y + dy, height);
+                                const idx = (ny * width + nx) * 4;
+                                rSum += data[idx];
+                                gSum += data[idx + 1];
+                                bSum += data[idx + 2];
+                                count++;
+                            }
+                        }
+                        const avgR = rSum / count;
+                        const avgG = gSum / count;
+                        const avgB = bSum / count;
+
+                        const newIdx = (y * width + x) * 4;
+                        // Slightly desaturate and add a hint of texture via random variation
+                        newData[newIdx] = this.clamp(avgR * 0.95 + Math.random() * 10 - 5);
+                        newData[newIdx + 1] = this.clamp(avgG * 0.95 + Math.random() * 10 - 5);
+                        newData[newIdx + 2] = this.clamp(avgB * 0.95 + Math.random() * 10 - 5);
+                        newData[newIdx + 3] = data[newIdx + 3];
+                    }
+                }
+                return newImageData;
+            }
+
+            applyImpressionistEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+                const dotSize = 3; // "Brush stroke" size
+
+                for (let y = 0; y < height; y += dotSize) {
+                    for (let x = 0; x < width; x += dotSize) {
+                        const midX = this.clampCoord(x + Math.floor(dotSize / 2), width);
+                        const midY = this.clampCoord(y + Math.floor(dotSize / 2), height);
+                        const originalIdx = (midY * width + midX) * 4;
+
+                        const r = data[originalIdx];
+                        const g = data[originalIdx + 1];
+                        const b = data[originalIdx + 2];
+
+                        for (let by = y; by < Math.min(y + dotSize, height); by++) {
+                            for (let bx = x; bx < Math.min(x + dotSize, width); bx++) {
+                                const newIdx = (by * width + bx) * 4;
+                                // Apply slightly randomized version of the average color to create dabs
+                                newData[newIdx] = this.clamp(r + Math.random() * 20 - 10);
+                                newData[newIdx + 1] = this.clamp(g + Math.random() * 20 - 10);
+                                newData[newIdx + 2] = this.clamp(b + Math.random() * 20 - 10);
+                                newData[newIdx + 3] = data[newIdx + 3];
+                            }
+                        }
+                    }
+                }
+                return newImageData;
+            }
+
+            applyCharcoalEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                // Grayscale
+                for (let i = 0; i < data.length; i += 4) {
+                    const avg = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+                    newData[i] = avg;
+                    newData[i + 1] = avg;
+                    newData[i + 2] = avg;
+                    newData[i + 3] = data[i + 3];
+                }
+
+                // Add noise/texture
+                for (let i = 0; i < newData.length; i += 4) {
+                    const noise = (Math.random() - 0.5) * 50; // Add random noise
+                    newData[i] = this.clamp(newData[i] + noise);
+                    newData[i + 1] = this.clamp(newData[i + 1] + noise);
+                    newData[i + 2] = this.clamp(newData[i + 2] + noise);
+                }
+                return newData;
+            }
+
+            applyDigitalGlitchEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                for (let y = 0; y < height; y++) {
+                    const shiftX = Math.floor(Math.random() * 20) - 10; // Random horizontal shift
+                    const colorShift = Math.random() > 0.8 ? Math.floor(Math.random() * 3) : 0; // Random color channel shift
+
+                    for (let x = 0; x < width; x++) {
+                        const originalX = this.clampCoord(x + shiftX, width);
+                        const originalIdx = (y * width + originalX) * 4;
+                        const newIdx = (y * width + x) * 4;
+
+                        if (originalIdx >= 0 && originalIdx + 3 < data.length) {
+                            if (colorShift === 1) { // Shift R to G, G to B, B to R
+                                newData[newIdx] = data[originalIdx + 1];
+                                newData[newIdx + 1] = data[originalIdx + 2];
+                                newData[newIdx + 2] = data[originalIdx];
+                            } else if (colorShift === 2) { // Invert colors randomly
+                                newData[newIdx] = this.clamp(255 - data[originalIdx]);
+                                newData[newIdx + 1] = this.clamp(255 - data[originalIdx + 1]);
+                                newData[newIdx + 2] = this.clamp(255 - data[originalIdx + 2]);
+                            } else {
+                                newData[newIdx] = data[originalIdx];
+                                newData[newIdx + 1] = data[originalIdx + 1];
+                                newData[newIdx + 2] = data[originalIdx + 2];
+                            }
+                            newData[newIdx + 3] = data[originalIdx + 3];
+                        }
+                    }
+                }
+                return newImageData;
+            }
+
+            applyPointillismEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                const dotSpacing = 5; // Spacing between the "dots"
+
+                for (let y = 0; y < height; y += dotSpacing) {
+                    for (let x = 0; x < width; x += dotSpacing) {
+                        const originalIdx = (y * width + x) * 4;
+                        const r = data[originalIdx];
+                        const g = data[originalIdx + 1];
+                        const b = data[originalIdx + 2];
+
+                        // Draw a "dot" by applying the color to a small area
+                        const dotRadius = Math.floor(dotSpacing / 2);
+                        for (let dy = -dotRadius; dy <= dotRadius; dy++) {
+                            for (let dx = -dotRadius; dx <= dotRadius; dx++) {
+                                if (dx * dx + dy * dy <= dotRadius * dotRadius) { // Circular dot
+                                    const nx = this.clampCoord(x + dx, width);
+                                    const ny = this.clampCoord(y + dy, height);
+                                    const newIdx = (ny * width + nx) * 4;
+                                    newData[newIdx] = r;
+                                    newData[newIdx + 1] = g;
+                                    newData[newIdx + 2] = b;
+                                    newData[newIdx + 3] = data[originalIdx + 3];
+                                }
+                            }
+                        }
+                    }
+                }
+                return newImageData;
+            }
+
+            applyCubistEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                const fragmentSize = 20; // Size of the "fragments"
+
+                for (let y = 0; y < height; y += fragmentSize) {
+                    for (let x = 0; x < width; x += fragmentSize) {
+                        // Calculate average color for the fragment
+                        let r = 0, g = 0, b = 0, count = 0;
+                        for (let by = y; by < Math.min(y + fragmentSize, height); by++) {
+                            for (let bx = x; bx < Math.min(x + fragmentSize, width); bx++) {
+                                const idx = (by * width + bx) * 4;
+                                r += data[idx];
+                                g += data[idx + 1];
+                                b += data[idx + 2];
+                                count++;
+                            }
+                        }
+                        if (count > 0) {
+                            r = Math.floor(r / count);
+                            g = Math.floor(g / count);
+                            b = Math.floor(b / count);
+                        }
+
+                        // Apply a simplified cubist distortion by drawing a slightly offset and scaled block
+                        const offsetX = (Math.random() - 0.5) * fragmentSize * 0.5;
+                        const offsetY = (Math.random() - 0.5) * fragmentSize * 0.5;
+                        const scale = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
+
+                        const startX = this.clampCoord(x + offsetX, width - 1);
+                        const startY = this.clampCoord(y + offsetY, height - 1);
+                        const endX = this.clampCoord(startX + fragmentSize * scale, width);
+                        const endY = this.clampCoord(startY + fragmentSize * scale, height);
+
+                        for (let by = Math.floor(startY); by < endY; by++) {
+                            for (let bx = Math.floor(startX); bx < endX; bx++) {
+                                const newIdx = (by * width + bx) * 4;
+                                if (newIdx >= 0 && newIdx + 3 < newData.length) {
+                                    newData[newIdx] = r;
+                                    newData[newIdx + 1] = g;
+                                    newData[newIdx + 2] = b;
+                                    newData[newIdx + 3] = data[originalIdx + 3];
+                                }
+                            }
+                        }
+                    }
+                }
+                return newImageData;
+            }
+
+            applyGothicEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                // Desaturate and darken, increase contrast
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    const avg = (r + g + b) / 3;
+
+                    newData[i] = this.clamp((avg - 128) * 1.5 + 128) * 0.8;
+                    newData[i + 1] = this.clamp((avg - 128) * 1.5 + 128) * 0.8;
+                    newData[i + 2] = this.clamp((avg - 128) * 1.5 + 128) * 0.8;
+                    newData[i + 3] = data[i + 3];
+                }
+                return newImageData;
+            }
+
+            applyCyberpunkEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                const neonColors = [
+                    [224, 59, 134], // Pink
+                    [0, 247, 224],  // Cyan
+                    [138, 43, 226]  // Purple
+                ];
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    let avgBrightness = (r + g + b) / 3;
+                    let selectedColor = neonColors[Math.floor(Math.random() * neonColors.length)];
+
+                    // Apply neon glow based on brightness
+                    newData[i] = this.clamp(selectedColor[0] * (avgBrightness / 255) * 1.5);
+                    newData[i + 1] = this.clamp(selectedColor[1] * (avgBrightness / 255) * 1.5);
+                    newData[i + 2] = this.clamp(selectedColor[2] * (avgBrightness / 255) * 1.5);
+                    newData[i + 3] = data[i + 3];
+                }
+                return newImageData;
+            }
+
+            applyCartoonEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                const levels = 32; // Reduce colors significantly for flat look
+
+                for (let i = 0; i < data.length; i += 4) {
+                    newData[i] = Math.floor(data[i] / levels) * levels;
+                    newData[i + 1] = Math.floor(data[i + 1] / levels) * levels;
+                    newData[i + 2] = Math.floor(data[i + 2] / levels) * levels;
+                    newData[i + 3] = data[i + 3];
+                }
+
+                // Apply a strong edge detection for outlines
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.putImageData(newImageData, 0, 0);
+                tempCtx.filter = 'contrast(500%) grayscale(100%)';
+                tempCtx.drawImage(tempCanvas, 0, 0);
+
+                const edges = tempCtx.getImageData(0, 0, width, height).data;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    // Blend original (color-reduced) with black edges
+                    if (edges[i] < 100) { // If it's a dark edge
+                        newData[i] = 0;
+                        newData[i + 1] = 0;
+                        newData[i + 2] = 0;
+                    }
+                }
+                return newImageData;
+            }
+
+            applyMangaEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                // Grayscale
+                for (let i = 0; i < data.length; i += 4) {
+                    const avg = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+                    newData[i] = avg;
+                    newData[i + 1] = avg;
+                    newData[i + 2] = avg;
+                    newData[i + 3] = data[i + 3];
+                }
+
+                // Apply halftone dots (simplified)
+                const dotDensity = 8; // Spacing for dots
+                const dotIntensity = 0.5; // How dark dots are
+
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const i = (y * width + x) * 4;
+                        const originalBrightness = newData[i];
+
+                        if ((x % dotDensity === 0) && (y % dotDensity === 0)) {
+                            // Draw a dot based on brightness
+                            const dotSize = (255 - originalBrightness) / 255 * (dotDensity / 2);
+                            for (let dy = -Math.floor(dotSize / 2); dy <= Math.ceil(dotSize / 2); dy++) {
+                                for (let dx = -Math.floor(dotSize / 2); dx <= Math.ceil(dotSize / 2); dx++) {
+                                    if (dx * dx + dy * dy <= dotSize * dotSize) { // Circular dot
+                                        const nx = this.clampCoord(x + dx, width);
+                                        const ny = this.clampCoord(y + dy, height);
+                                        const dotIdx = (ny * width + nx) * 4;
+                                        newData[dotIdx] = 0; // Black dot
+                                        newData[dotIdx + 1] = 0;
+                                        newData[dotIdx + 2] = 0;
+                                    }
+                                }
+                            }
+                        } else {
+                            newData[i] = 255; // Default white background
+                            newData[i + 1] = 255;
+                            newData[i + 2] = 255;
+                        }
+                    }
+                }
+                return newImageData;
+            }
+
+            applyRetroWaveEffect(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                // Apply a strong pink/purple/cyan gradient and saturation boost
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    
+                    // Simple color mapping/shift
+                    newData[i] = this.clamp(r * 0.8 + b * 0.4); // Reddish-purple
+                    newData[i + 1] = this.clamp(g * 0.8 + r * 0.2); // Greenish-cyan
+                    newData[i + 2] = this.clamp(b * 1.2 + g * 0.2); // Blueish-purple
+                    newData[i + 3] = data[i + 3];
+                }
+                return newImageData;
+            }
+
+
+            // Generic style effect applied when a custom style image is uploaded (not a preset)
+            applyGenericStyleEffect(contentImageData) {
+                const data = contentImageData.data;
+                const width = contentImageData.width;
+                const height = contentImageData.height;
+                const newImageData = new ImageData(width, height);
+                const newData = newImageData.data;
+
+                // This function is specifically for when a custom style image is uploaded.
+                // It calculates the average color of the uploaded style image and blends it.
+                if (this.styleImage) {
+                    const styleCanvas = document.createElement('canvas');
+                    const styleCtx = styleCanvas.getContext('2d');
+                    // Draw the style image onto a temporary canvas to get its pixel data
+                    // Ensure the style canvas is not too large for performance
+                    const styleMaxWidth = 100; // Sample a smaller version for average color
+                    const styleMaxHeight = 100;
+                    let styleDrawWidth = this.styleImage.width;
+                    let styleDrawHeight = this.styleImage.height;
+
+                    if (styleDrawWidth > styleDrawHeight) {
+                        if (styleDrawWidth > styleMaxWidth) {
+                            styleDrawHeight = Math.round(styleDrawHeight * (styleMaxWidth / styleDrawWidth));
+                            styleDrawWidth = styleMaxWidth;
+                        }
+                    } else {
+                        if (styleDrawHeight > styleMaxHeight) {
+                            styleDrawWidth = Math.round(styleDrawWidth * (styleMaxHeight / styleDrawHeight));
+                            styleDrawHeight = styleMaxHeight;
+                        }
+                    }
+
+                    styleCanvas.width = styleDrawWidth;
+                    styleCanvas.height = styleDrawHeight;
+                    styleCtx.drawImage(this.styleImage, 0, 0, styleCanvas.width, styleCanvas.height);
+                    const stylePixels = styleCtx.getImageData(0, 0, styleCanvas.width, styleCanvas.height).data;
+
+                    let avgR = 0, avgG = 0, avgB = 0;
+                    if (stylePixels.length > 0) {
+                        for (let i = 0; i < stylePixels.length; i += 4) {
+                            avgR += stylePixels[i];
+                            avgG += stylePixels[i + 1];
+                            avgB += stylePixels[i + 2];
+                        }
+                        const totalPixels = stylePixels.length / 4;
+                        avgR = avgR / totalPixels;
+                        avgG = avgG / totalPixels;
+                        avgB = avgB / totalPixels;
+                    } else {
+                        // Fallback to a neutral color if style image has no valid pixels
+                        avgR = 128; avgG = 128; avgB = 128;
+                    }
+
+                    // Blend the content image with the average color of the style image
+                    for (let i = 0; i < data.length; i += 4) {
+                        newData[i] = this.clamp((data[i] * 0.7) + (avgR * 0.3)); // 70% original color, 30% style average color
+                        newData[i + 1] = this.clamp((data[i + 1] * 0.7) + (avgG * 0.3));
+                        newData[i + 2] = this.clamp((data[i + 2] * 0.7) + (avgB * 0.3));
+                        newData[i + 3] = data[i + 3];
+                    }
+                } else {
+                    // This else block should ideally not be hit if process button is enabled correctly,
+                    // but it's a fallback for a very basic contrast boost.
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+
+                        newData[i] = this.clamp((r - 128) * 1.2 + 128);
+                        newData[i + 1] = this.clamp((g - 128) * 1.2 + 128);
+                        newData[i + 2] = this.clamp((b - 128) * 1.2 + 128);
+                        newData[i + 3] = data[i + 3];
+                    }
+                }
+                return newImageData;
+            }
+
+            // Helper to clamp color values between 0 and 255
+            clamp(value) {
+                return Math.max(0, Math.min(255, value));
+            }
+
+            // Helper to clamp coordinates within image bounds
+            clampCoord(coord, max) {
+                return Math.max(0, Math.min(max - 1, Math.floor(coord)));
+            }
+
+            // Displays the original and stylized images in the results section.
+            displayResults(result) {
+                const resultSection = document.getElementById('resultSection');
+                const originalResult = document.getElementById('originalResult');
+                const styledResult = document.getElementById('styledResult');
+                const downloadBtn = document.getElementById('downloadBtn');
+
+                originalResult.src = result.original;
+                styledResult.src = result.styled;
+                this.resultImage = result.styled; // Store for download
+
+                resultSection.classList.remove('hidden'); // Show results section
+                downloadBtn.classList.remove('hidden'); // Show download button
+
+                // Scroll to results for better UX
+                resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            // Allows the user to download the stylized image.
+            downloadResult() {
+                if (!this.resultImage) {
+                    this.showAlert('No stylized image available to download.', 'error');
+                    return;
+                }
+
+                const link = document.createElement('a');
+                link.download = 'neural-style-transfer-result.png';
+                link.href = this.resultImage;
+                document.body.appendChild(link); // Required for Firefox
+                link.click();
+                document.body.removeChild(link); // Clean up
+            }
+
+            // Custom alert message instead of window.alert
+            showAlert(message, type = 'error') {
+                const alertBox = document.createElement('div');
+                alertBox.className = `fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white p-4 rounded-lg shadow-xl z-50 text-center custom-alert`;
+                if (type === 'error') {
+                    alertBox.classList.add('bg-red-500');
+                } else if (type === 'info') {
+                    alertBox.classList.add('bg-blue-500');
+                }
+                alertBox.textContent = message;
+                document.body.appendChild(alertBox);
+                setTimeout(() => {
+                    alertBox.remove();
+                }, 4000); // Display for 4 seconds
+            }
+        }
+
+        // Initialize the application once the DOM is fully loaded.
+        document.addEventListener('DOMContentLoaded', () => {
+            new NeuralStyleTransfer();
+        });
+    </script>
+</body>
+</html>
