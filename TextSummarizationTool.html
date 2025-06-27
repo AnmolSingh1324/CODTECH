@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Text Summarization Tool</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap');
+        
+        :root {
+            --neon-pink: #ff2d75;
+            --neon-blue: #00f9ff;
+            --neon-purple: #9d00ff;
+            --matrix-green: #00ff66;
+            --dark-bg: #0a0a15;
+            --darker-bg: #050510;
+            --terminal-bg: rgba(5, 5, 15, 0.85);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        
+        body {
+            background: var(--dark-bg);
+            color: var(--neon-blue);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, var(--neon-purple), transparent 50%),
+                radial-gradient(circle at 80% 70%, var(--neon-pink), transparent 50%);
+            opacity: 0.1;
+            z-index: -1;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--terminal-bg);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            border: 1px solid rgba(0, 249, 255, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+            padding: 30px;
+            text-align: center;
+            color: white;
+            border-bottom: 1px solid rgba(0, 249, 255, 0.2);
+        }
+        
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 0 0 10px var(--neon-blue);
+            letter-spacing: 3px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            color: var(--matrix-green);
+            text-shadow: 0 0 5px var(--matrix-green);
+        }
+        
+        .main-content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .input-section, .output-section {
+            background: rgba(10, 10, 25, 0.8);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 
+                0 0 15px rgba(0, 249, 255, 0.1),
+                inset 0 0 15px rgba(0, 249, 255, 0.05);
+            border: 1px solid rgba(0, 249, 255, 0.1);
+            position: relative;
+        }
+        
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--neon-pink);
+            text-shadow: 0 0 5px var(--neon-pink);
+            letter-spacing: 1px;
+        }
+        
+        .section-title::before {
+            content: ">";
+            margin-right: 10px;
+            color: var(--matrix-green);
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 300px;
+            background: rgba(0, 0, 20, 0.7);
+            border: 1px solid rgba(0, 249, 255, 0.3);
+            color: var(--matrix-green);
+            padding: 15px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--neon-pink);
+            box-shadow: 
+                inset 0 0 10px rgba(0, 0, 0, 0.5),
+                0 0 15px rgba(255, 45, 117, 0.3);
+        }
+        
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        label {
+            font-weight: 500;
+            color: var(--neon-blue);
+        }
+        
+        select, input[type="range"] {
+            padding: 8px 12px;
+            background: rgba(0, 0, 30, 0.8);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 0 10px rgba(0, 249, 255, 0.1);
+        }
+        
+        input[type="range"] {
+            width: 120px;
+        }
+        
+        .range-value {
+            background: var(--neon-purple);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .summarize-btn {
+            background: linear-gradient(
+                135deg,
+                rgba(255, 45, 117, 0.2),
+                rgba(157, 0, 255, 0.2)
+            );
+            border: 1px solid var(--neon-pink);
+            color: var(--neon-pink);
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 45, 117, 0.3);
+            letter-spacing: 1px;
+        }
+        
+        .summarize-btn:hover {
+            background: linear-gradient(
+                135deg,
+                rgba(255, 45, 117, 0.3),
+                rgba(157, 0, 255, 0.3)
+            );
+            box-shadow: 0 8px 25px rgba(255, 45, 117, 0.4);
+            text-shadow: 0 0 10px var(--neon-pink);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid transparent;
+            border-top-color: var(--neon-pink);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .summary-output {
+            background: rgba(0, 0, 30, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 200px;
+            border-left: 4px solid var(--neon-purple);
+            font-family: 'Georgia', serif;
+            line-height: 1.6;
+            color: white;
+        }
+        
+        .stats {
+            background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .sample-texts {
+            margin-top: 20px;
+        }
+        
+        .sample-btn {
+            background: rgba(0, 5, 20, 0.8);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 8px 15px;
+            border-radius: 8px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .sample-btn:hover {
+            background: var(--neon-purple);
+            color: white;
+            border-color: var(--neon-purple);
+        }
+        
+        .algorithm-info {
+            background: rgba(0, 100, 150, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            border-left: 4px solid var(--neon-blue);
+        }
+        
+        .algorithm-info h4 {
+            color: var(--neon-blue);
+            margin-bottom: 8px;
+        }
+        
+        .algorithm-info p {
+            font-size: 14px;
+            color: var(--matrix-green);
+            line-height: 1.5;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Text Summarization Tool</h1>
+            <p>// Summaries Using Advanced NLP Techniques // Created By ANMOL SINGH //</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2 class="section-title">Input Text</h2>
+                
+                <textarea id="inputText" placeholder="Paste your lengthy article or text here... The tool works best with articles that are at least 200 words long."></textarea>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="algorithm">Algorithm:</label>
+                        <select id="algorithm">
+                            <option value="frequency">Frequency-Based</option>
+                            <option value="textrank">TextRank</option>
+                            <option value="hybrid">Hybrid Approach</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="summaryLength">Summary Length:</label>
+                        <input type="range" id="summaryLength" min="1" max="10" value="3">
+                        <span class="range-value" id="lengthValue">3</span>
+                    </div>
+                </div>
+
+                <div class="sample-texts">
+                    <p><strong>Sample Texts:</strong></p>
+                    <button class="sample-btn" onclick="loadSample('tech')">Technology Article</button>
+                    <button class="sample-btn" onclick="loadSample('science')">Science Article</button>
+                    <button class="sample-btn" onclick="loadSample('business')">Business Article</button>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="summarize-btn" onclick="summarizeText()">
+                        Generate Summary
+                    </button>
+                </div>
+
+                <div class="algorithm-info">
+                    <h4>Current Algorithm: <span id="currentAlgorithm">Frequency-Based</span></h4>
+                    <p id="algorithmDescription">Uses word frequency analysis and sentence scoring to identify the most important sentences in the text.</p>
+                </div>
+            </div>
+
+            <div class="output-section">
+                <h2 class="section-title">Summary Output</h2>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing text and generating summary...</p>
+                </div>
+
+                <div class="summary-output" id="summaryOutput">
+                    <p style="color: #aaa; font-style: italic;">Your summary will appear here after processing the input text. The tool will analyze sentence importance, extract key concepts, and present the most relevant information in a concise format.</p>
+                </div>
+
+                <div class="stats" id="stats" style="display: none;">
+                    <div class="stat-item">
+                        <span class="stat-value" id="originalWords">0</span>
+                        <span class="stat-label">Original Words</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="summaryWords">0</span>
+                        <span class="stat-label">Summary Words</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="compressionRatio">0%</span>
+                        <span class="stat-label">Compression</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="processingTime">0ms</span>
+                        <span class="stat-label">Processing Time</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample texts for demonstration
+        const sampleTexts = {
+            tech: `Artificial Intelligence and machine learning have revolutionized the way we approach complex problems in various industries. From healthcare to finance, AI systems are being deployed to automate processes, analyze vast amounts of data, and make predictions that were previously impossible for humans to achieve with the same level of accuracy and speed.
+
+The foundation of modern AI lies in deep learning, a subset of machine learning that uses neural networks with multiple layers to process information. These neural networks are inspired by the human brain's structure and function, allowing computers to learn patterns and make decisions based on data without being explicitly programmed for every scenario.
+
+In healthcare, AI is being used to diagnose diseases, recommend treatments, and even discover new drugs. Machine learning algorithms can analyze medical images, such as X-rays and MRIs, with remarkable accuracy, often detecting abnormalities that human radiologists might miss. This technology has the potential to save countless lives by enabling early detection of serious conditions like cancer.
+
+The financial sector has also embraced AI for fraud detection, algorithmic trading, and risk assessment. Banks and financial institutions use machine learning models to analyze transaction patterns and identify suspicious activities in real-time, protecting customers from fraud and ensuring the security of financial systems.
+
+However, the rapid advancement of AI technology also raises important ethical and societal questions. Issues such as job displacement, privacy concerns, and algorithmic bias need to be addressed as AI becomes more prevalent in our daily lives. It is crucial for policymakers, technologists, and society as a whole to work together to ensure that AI development is guided by ethical principles and serves the greater good.
+
+Looking towards the future, AI is expected to become even more sophisticated and integrated into various aspects of human life. From autonomous vehicles to smart cities, the potential applications of AI seem limitless. As we continue to push the boundaries of what's possible with artificial intelligence, it's important to maintain a balance between innovation and responsibility.`,
+
+            science: `Climate change represents one of the most pressing challenges facing humanity in the 21st century. The overwhelming scientific consensus indicates that human activities, particularly the emission of greenhouse gases, are the primary drivers of the current warming trend that has been observed since the mid-20th century.
+
+The greenhouse effect, while natural and necessary for life on Earth, has been intensified by human activities. Carbon dioxide, methane, and other greenhouse gases trap heat in the atmosphere, leading to a gradual increase in global temperatures. The concentration of atmospheric CO2 has increased by more than 40% since pre-industrial times, primarily due to fossil fuel combustion and deforestation.
+
+The impacts of climate change are already visible around the world. Rising sea levels threaten coastal communities, while changing precipitation patterns affect agriculture and water resources. Extreme weather events, including hurricanes, droughts, and heatwaves, are becoming more frequent and intense. These changes pose significant risks to human health, food security, and economic stability.
+
+Scientific models predict that without significant action to reduce greenhouse gas emissions, global temperatures could rise by 3-5°C by the end of this century. Such warming would have catastrophic consequences, including widespread ecosystem collapse, mass extinction of species, and displacement of millions of people due to sea-level rise and extreme weather.
+
+However, there is hope. Renewable energy technologies, such as solar and wind power, have become increasingly cost-effective and are being deployed at unprecedented scales. Many countries have committed to achieving net-zero emissions by mid-century, and international cooperation through agreements like the Paris Climate Accord provides a framework for collective action.
+
+Individual actions also play a crucial role in addressing climate change. Reducing energy consumption, choosing sustainable transportation options, and supporting environmentally responsible businesses are ways that everyone can contribute to the solution. The transition to a low-carbon economy presents opportunities for innovation, job creation, and improved quality of life.`,
+
+            business: `The global economy has undergone significant transformations in recent decades, driven by technological advancement, globalization, and changing consumer behaviors. Digital transformation has become a critical factor for business success, with companies across all industries investing heavily in technology to improve efficiency, enhance customer experiences, and create new revenue streams.
+
+E-commerce has revolutionized retail, fundamentally changing how consumers shop and businesses operate. The COVID-19 pandemic accelerated this trend, with online sales growing exponentially as consumers adapted to remote shopping. Traditional brick-and-mortar retailers have had to quickly develop omnichannel strategies to remain competitive in this new landscape.
+
+Supply chain management has become increasingly complex as businesses operate on a global scale. Recent disruptions, including the pandemic and geopolitical tensions, have highlighted the vulnerabilities in global supply chains. Companies are now focusing on building more resilient and flexible supply networks, often incorporating advanced technologies like artificial intelligence and blockchain for better visibility and control.
+
+The rise of the gig economy has transformed the traditional employment model. Platforms like Uber, Airbnb, and various freelancing websites have created new opportunities for individuals to monetize their skills and assets. This shift has implications for labor laws, social benefits, and economic policy, as governments struggle to adapt regulations to this new reality.
+
+Sustainability has emerged as a key business imperative, driven by consumer demand, regulatory requirements, and investor expectations. Companies are implementing environmental, social, and governance (ESG) practices not just as corporate responsibility measures, but as essential components of their business strategies. This includes reducing carbon footprints, ensuring ethical supply chains, and promoting diversity and inclusion.
+
+The financial technology (fintech) sector has disrupted traditional banking and financial services. Digital payment systems, peer-to-peer lending platforms, and cryptocurrency have challenged established financial institutions and created new opportunities for innovation. This disruption has forced traditional banks to modernize their services and embrace digital transformation to remain relevant.`
+        };
+
+        // Algorithm descriptions
+        const algorithmDescriptions = {
+            frequency: "Uses word frequency analysis and sentence scoring to identify the most important sentences in the text.",
+            textrank: "Applies the PageRank algorithm to sentences, considering their relationships and importance within the document.",
+            hybrid: "Combines frequency-based scoring with TextRank analysis for more accurate and balanced summaries."
+        };
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLengthValue();
+            updateAlgorithmInfo();
+        });
+
+        // Update summary length display
+        document.getElementById('summaryLength').addEventListener('input', updateLengthValue);
+        document.getElementById('algorithm').addEventListener('change', updateAlgorithmInfo);
+
+        function updateLengthValue() {
+            const value = document.getElementById('summaryLength').value;
+            document.getElementById('lengthValue').textContent = value;
+        }
+
+        function updateAlgorithmInfo() {
+            const algorithm = document.getElementById('algorithm').value;
+            document.getElementById('currentAlgorithm').textContent = 
+                algorithm.charAt(0).toUpperCase() + algorithm.slice(1) + (algorithm === 'textrank' ? '' : algorithm === 'frequency' ? '' : '');
+            document.getElementById('algorithmDescription').textContent = algorithmDescriptions[algorithm];
+        }
+
+        // Load sample text
+        function loadSample(type) {
+            document.getElementById('inputText').value = sampleTexts[type];
+        }
+
+        // Text preprocessing functions
+        function preprocessText(text) {
+            // Clean and normalize text
+            return text.replace(/\s+/g, ' ').trim();
+        }
+
+        function tokenizeSentences(text) {
+            // Simple sentence tokenization
+            return text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        }
+
+        function tokenizeWords(text) {
+            // Simple word tokenization and cleaning
+            return text.toLowerCase()
+                      .replace(/[^\w\s]/g, ' ')
+                      .split(/\s+/)
+                      .filter(w => w.length > 2);
+        }
+
+        // Stop words (simplified list)
+        const stopWords = new Set([
+            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their'
+        ]);
+
+        // Frequency-based summarization
+        function frequencyBasedSummary(text, numSentences) {
+            const sentences = tokenizeSentences(text);
+            const words = tokenizeWords(text).filter(w => !stopWords.has(w));
+            
+            // Calculate word frequencies
+            const wordFreq = {};
+            words.forEach(word => {
+                wordFreq[word] = (wordFreq[word] || 0) + 1;
+            });
+
+            // Score sentences based on word frequencies
+            const sentenceScores = sentences.map(sentence => {
+                const sentenceWords = tokenizeWords(sentence).filter(w => !stopWords.has(w));
+                const score = sentenceWords.reduce((sum, word) => sum + (wordFreq[word] || 0), 0);
+                return { sentence: sentence.trim(), score: score / sentenceWords.length };
+            });
+
+            // Sort by score and return top sentences
+            return sentenceScores
+                .sort((a, b) => b.score - a.score)
+                .slice(0, numSentences)
+                .map(item => item.sentence);
+        }
+
+        // TextRank-based summarization
+        function textRankSummary(text, numSentences) {
+            const sentences = tokenizeSentences(text);
+            const n = sentences.length;
+            
+            if (n <= numSentences) {
+                return sentences.map(s => s.trim());
+            }
+
+            // Create similarity matrix
+            const similarity = Array(n).fill().map(() => Array(n).fill(0));
+            
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    if (i !== j) {
+                        similarity[i][j] = calculateSimilarity(sentences[i], sentences[j]);
+                    }
+                }
+            }
+
+            // Apply TextRank algorithm
+            let scores = Array(n).fill(1.0);
+            const damping = 0.85;
+            const iterations = 100;
+
+            for (let iter = 0; iter < iterations; iter++) {
+                const newScores = Array(n).fill(0);
+                
+                for (let i = 0; i < n; i++) {
+                    for (let j = 0; j < n; j++) {
+                        if (i !== j && similarity[j][i] > 0) {
+                            const sum = similarity[j].reduce((a, b) => a + b, 0);
+                            if (sum > 0) {
+                                newScores[i] += (damping * scores[j] * similarity[j][i]) / sum;
+                            }
+                        }
+                    }
+                    newScores[i] += (1 - damping);
+                }
+                
+                scores = newScores;
+            }
+
+            // Return top scored sentences
+            const rankedSentences = sentences.map((sentence, index) => ({
+                sentence: sentence.trim(),
+                score: scores[index],
+                index: index
+            }));
+
+            return rankedSentences
+                .sort((a, b) => b.score - a.score)
+                .slice(0, numSentences)
+                .sort((a, b) => a.index - b.index)
+                .map(item => item.sentence);
+        }
+
+        // Calculate sentence similarity (simplified)
+        function calculateSimilarity(sent1, sent2) {
+            const words1 = new Set(tokenizeWords(sent1).filter(w => !stopWords.has(w)));
+            const words2 = new Set(tokenizeWords(sent2).filter(w => !stopWords.has(w)));
+            
+            const intersection = new Set([...words1].filter(w => words2.has(w)));
+            const union = new Set([...words1, ...words2]);
+            
+            return union.size > 0 ? intersection.size / union.size : 0;
+        }
+
+        // Hybrid approach
+        function hybridSummary(text, numSentences) {
+            const freqSummary = frequencyBasedSummary(text, Math.ceil(numSentences * 1.5));
+            const rankSummary = textRankSummary(text, Math.ceil(numSentences * 1.5));
+            
+            // Combine and deduplicate
+            const combined = [...new Set([...freqSummary, ...rankSummary])];
+            
+            // Re-score combined sentences
+            const sentences = tokenizeSentences(text);
+            const words = tokenizeWords(text).filter(w => !stopWords.has(w));
+            
+            const wordFreq = {};
+            words.forEach(word => {
+                wordFreq[word] = (wordFreq[word] || 0) + 1;
+            });
+
+            const scoredSentences = combined.map(sentence => {
+                const sentenceWords = tokenizeWords(sentence).filter(w => !stopWords.has(w));
+                const freqScore = sentenceWords.reduce((sum, word) => sum + (wordFreq[word] || 0), 0) / sentenceWords.length;
+                const positionScore = 1 - (sentences.indexOf(sentence) / sentences.length); // Earlier sentences get higher scores
+                const lengthScore = Math.min(sentenceWords.length / 20, 1); // Prefer medium-length sentences
+                
+                return {
+                    sentence,
+                    score: freqScore * 0.5 + positionScore * 0.3 + lengthScore * 0.2
+                };
+            });
+
+            return scoredSentences
+                .sort((a, b) => b.score - a.score)
+                .slice(0, numSentences)
+                .map(item => item.sentence);
+        }
+
+        // Main summarization function
+        function summarizeText() {
+            const inputText = document.getElementById('inputText').value.trim();
+            const algorithm = document.getElementById('algorithm').value;
+            const summaryLength = parseInt(document.getElementById('summaryLength').value);
+
+            if (!inputText) {
+                alert('Please enter some text to summarize.');
+                return;
+            }
+
+            if (inputText.length < 100) {
+                alert('Please enter a longer text (at least 100 characters) for better summarization results.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('summaryOutput').style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+            document.querySelector('.summarize-btn').disabled = true;
+
+            const startTime = performance.now();
+
+            // Simulate processing delay for better UX
+            setTimeout(() => {
+                try {
+                    const preprocessedText = preprocessText(inputText);
+                    let summary;
+
+                    switch (algorithm) {
+                        case 'frequency':
+                            summary = frequencyBasedSummary(preprocessedText, summaryLength);
+                            break;
+                        case 'textrank':
+                            summary = textRankSummary(preprocessedText, summaryLength);
+                            break;
+                        case 'hybrid':
+                            summary = hybridSummary(preprocessedText, summaryLength);
+                            break;
+                        default:
+                            summary = frequencyBasedSummary(preprocessedText, summaryLength);
+                    }
+
+                    const endTime = performance.now();
+                    const processingTime = Math.round(endTime - startTime);
+
+                    // Display results
+                    displayResults(summary, inputText, processingTime);
+
+                } catch (error) {
+                    console.error('Summarization error:', error);
+                    document.getElementById('summaryOutput').innerHTML = 
+                        '<p style="color: red;">An error occurred during summarization. Please try again with different text.</p>';
+                } finally {
+                    // Hide loading
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('summaryOutput').style.display = 'block';
+                    document.querySelector('.summarize-btn').disabled = false;
+                }
+            }, 1500);
+        }
+
+        function displayResults(summary, originalText, processingTime) {
+            // Display summary
+            const summaryHtml = summary.map((sentence, index) => 
+                `<p style="margin-bottom: 12px;"><strong>${index + 1}.</strong> ${sentence}</p>`
+            ).join('');
+            
+            document.getElementById('summaryOutput').innerHTML = summaryHtml;
+
+            // Calculate and display statistics
+            const originalWords = originalText.split(/\s+/).length;
+            const summaryWords = summary.join(' ').split(/\s+/).length;
+            const compressionRatio = Math.round((1 - summaryWords / originalWords) * 100);
+
+            document.getElementById('originalWords').textContent = originalWords;
+            document.getElementById('summaryWords').textContent = summaryWords;
+            document.getElementById('compressionRatio').textContent = compressionRatio + '%';
+            document.getElementById('processingTime').textContent = processingTime + 'ms';
+
+            document.getElementById('stats').style.display = 'block';
+        }
+
+        // Word count function for real-time feedback
+        function updateWordCount() {
+            const text = document.getElementById('inputText').value;
+            const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
+            // You can add a word counter display here if needed
+        }
+
+        // Add event listener for real-time word counting
+        document.getElementById('inputText').addEventListener('input', updateWordCount);
+    </script>
+</body>
+</html>
